@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Simple SME.
-Script to perform SME mode scan using Santec's TSL and MPM.
+Script to perform SME mode scan using Santec's TSL and MPM via GPIB communication.
 
-Last Updated: Mon Jan 27, 2025 15:17
+Last Updated: Mon Jan 27, 2025 15:52
 Dependencies: pyvisa, numpy, time
 """
 
@@ -23,12 +23,15 @@ def initialize_instruments():
     rm = pyvisa.ResourceManager()
     tools = [resource for resource in rm.list_resources() if 'GPIB' in resource]  # Filter GPIB devices
     for tool in tools:
-        buffer = rm.open_resource(tool, read_termination='\r\n')
-        idn = buffer.query("*IDN?")
-        if 'TSL' in idn:
-            TSL = buffer  # Assign TSL instrument
-        elif 'MPM' in idn:
-            MPM = buffer  # Assign MPM instrument
+        try:
+            buffer = rm.open_resource(tool, read_termination='\r\n')
+            idn = buffer.query("*IDN?")
+            if 'TSL' in idn:
+                TSL = buffer  # Assign TSL instrument
+            elif 'MPM' in idn:
+                MPM = buffer  # Assign MPM instrument
+        except Exception as e:
+            print(f"Error while opening {tool}: {e}")
 
 
 def configure_tsl(power, start_wavelength, stop_wavelength, speed):
