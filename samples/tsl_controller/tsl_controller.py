@@ -4,12 +4,33 @@ from tsl_information import AlertCode, CommandError
 
 class TSL:
     def __init__(self, instance):
+        """
+        Initializes the TSL class with an opened PyVISA resource.
+
+        Parameters:
+            instance: An open PyVISA resource representing the connected instrument.
+        """
         self.instance = instance
 
     def query(self, command):
+        """
+        Sends a query command to the instrument and returns the response.
+
+        Parameters:
+            command (str): The command to query the instrument.
+
+        Returns:
+            str: The response from the instrument.
+        """
         return self.instance.query(command)
 
     def write(self, command):
+        """
+        Sends a write command to the instrument.
+
+        Parameters:
+            command (str): The command to send to the instrument.
+        """
         self.instance.write(command)
 
     @property
