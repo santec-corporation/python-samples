@@ -51,8 +51,9 @@ class TSL:
         ・Command input queue
         ・Error queue
         """
-        self.query('*RST')
+        self.write('*RST')
 
+    @property
     def self_test_query(self):
         """
         Self-test Query.
@@ -62,6 +63,7 @@ class TSL:
         response = self.query('*TST?')
         return "No Error" if response == '0' else "Error"
 
+    @property
     def operation_complete_query(self):
         """
         Operation Complete Query.
@@ -80,7 +82,7 @@ class TSL:
         ・Standard Event Status Register
         ・Error Queue
         """
-        self.query('*CLS')
+        self.write('*CLS')
 
     @property
     def standard_event_enable_register(self):
