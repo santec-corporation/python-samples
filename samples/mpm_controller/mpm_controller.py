@@ -13,8 +13,6 @@ class MPM:
         self.instance = instance
 
         self._power_mode_for_each_channel = None
-        self._measurement_status = None
-        self._logging_points = None
 
     def query(self, command):
         """
@@ -521,7 +519,7 @@ class MPM:
     @property
     def logging_status(self):
         """
-        Check measuring status.
+        Gets the latest measuring status and logging points.
 
         Response:
             <value1>,<value2>
@@ -531,23 +529,12 @@ class MPM:
                     -1 – The measurement is forcibly stopped.
                 <value2>: Measured logging point
 
-        Response: 1,100
+        Example Response: 1,100
         """
-        status, count = self.query('STAT?').split(',')
-        self._measurement_status = int(status)
-        self._logging_points = int(count)
-        return status, count
+        status, count = self.instance.query('STAT?').split(',')
+        return int(status), int(count)
 
     @property
-    def measurement_status(self):
-        return self._measurement_status
-
-    @property
-    def logging_points(self):
-        return self._logging_points
-
-    @property
-    @abstractmethod
     def logging_data_point(self):
         """Get the current measurement logging point in CONST1/CONST2/FREE-RUN measuring mode."""
         response = self.query('LOGN?')
@@ -573,7 +560,7 @@ class MPM:
             raise ValueError("Measurement data point must be between 1 and 1,000,000.")
         self.write(f'LOGN {value}')
 
-    def logging_data(self, module_no: int, channel_no: int):
+    def get_logging_data(self, module_no: int, channel_no: int):
         """
         Read out the logging logg.
         This command is not available for RS-232 communication.
@@ -581,10 +568,10 @@ class MPM:
         Example:    LOGG? 0,1
         """
         try:
-            return self.query_binary_values(f'LOGG? {module_no},{channel_no}',
-                                            datatype='f',
-                                            is_big_endian=False,
-                                            expect_termination=False)
+            return self.instance.query_binary_values(f'LOGG? {module_no},{channel_no}',
+                                                     datatype='f',
+                                                     is_big_endian=False,
+                                                     expect_termination=False)
         except Exception as e:
             print(f"Error while fetching logging data (query_binary_values): {e}")
 
