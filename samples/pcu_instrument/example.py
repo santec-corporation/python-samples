@@ -1,4 +1,4 @@
-from pcu_controller import PCU
+from pcu_instrument import PCU
 import pyvisa
 
 # Initialize PyVISA resource manager

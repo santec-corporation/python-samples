@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+TSL instrument class.
+Command mode: Legacy
+Communication: GPIB | LAN (PyVISA)
+
+Last Updated: Thu Jan 30, 2025 13:46
+"""
+
 from tsl_information import AlertCode, CommandError
 
 

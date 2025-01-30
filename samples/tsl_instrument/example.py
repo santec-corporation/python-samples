@@ -1,4 +1,4 @@
-from tsl_controller import TSL
+from tsl_instrument import TSL
 import pyvisa
 
 # Initialize PyVISA resource manager

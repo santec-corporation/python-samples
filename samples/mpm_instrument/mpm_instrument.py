@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+MPM instrument class.
+Command mode: Legacy
+Communication: GPIB | LAN (PyVISA)
+
+Last Updated: Thu Jan 30, 2025 13:46
+"""
+
 from mpm_information import ErrorCode
 
 
@@ -574,3 +582,9 @@ class MPM:
                                                      expect_termination=False)
         except Exception as e:
             print(f"Error while fetching logging data (query_binary_values): {e}")
+
+        try:
+            self.instance.write(f'LOGG? {module_no},{channel_no}')
+            return self.instance.read_raw()
+        except Exception as e:
+            print(f"Error while fetching logging data (read_raw): {e}")

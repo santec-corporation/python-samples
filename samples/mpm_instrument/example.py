@@ -1,4 +1,4 @@
-from mpm_controller import MPM
+from mpm_instrument import MPM
 import pyvisa
 
 # Initialize PyVISA resource manager
