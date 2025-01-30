@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 Simple SME.
-Script to perform SME mode scan using Santec's TSL and MPM via GPIB communication.
+Script to perform SME mode scan.
+Instruments: Santec TSL and MPM
+Command mode: Legacy
+Communication: GPIB
 
-Last Updated: Mon Jan 27, 2025 15:52
+Last Updated: Thu Jan 30, 2025 13:46
 Dependencies: pyvisa, numpy, time
 """
 
 import time
 import pyvisa
 import numpy as np
-
 
 # Initialize global variables
 TSL = None  # Tunable Laser Source
@@ -24,22 +26,24 @@ def initialize_instruments():
     tools = [resource for resource in rm.list_resources() if 'GPIB' in resource]  # Filter GPIB devices
     for tool in tools:
         try:
-            buffer = rm.open_resource(tool, read_termination='\r\n')
+            buffer = rm.open_resource(tool)
             idn = buffer.query("*IDN?")
             if 'TSL' in idn:
                 TSL = buffer  # Assign TSL instrument
+                TSL.read_termination = '\r\n'
             elif 'MPM' in idn:
                 MPM = buffer  # Assign MPM instrument
+                MPM.read_termination = '\n'
         except Exception as e:
             print(f"Error while opening {tool}: {e}")
 
 
-def configure_tsl(power, start_wavelength, stop_wavelength, speed):
+def configure_tsl(power, start_wavelength, stop_wavelength, speed, step_size):
     """Configures the TSL instrument with the given parameters."""
     TSL.write('*CLS')  # Clear status
     TSL.write('*RST')  # Reset device
     TSL.write('SYST:COMM:GPIB:DEL 2')  # Set GPIB delimiter
-    TSL.write('SYST:COMM:COD 1')  # Enable SCPI commands
+    TSL.write('SYST:COMM:COD 0')  # Enable Legacy commands
 
     if TSL.query('POW:STAT?') == '0':  # Check if output is off
         TSL.write('POW:STAT 1')  # Turn on output
@@ -49,10 +53,10 @@ def configure_tsl(power, start_wavelength, stop_wavelength, speed):
     TSL.write('POW:UNIT 0')  # Set power unit to dBm
     TSL.write('WAV:UNIT 0')  # Set wavelength unit to nm
     TSL.write('COHCtrl 0')  # Disable coherence control
-    TSL.write('POW:ATT:AUT 0')  # Disable automatic attenuation
-    TSL.write('POW:ATT 0')  # Set attenuator value to 0
+    TSL.write('POW:ATT:AUT 1')  # Auto power control mode
+    # TSL.write('POW:ATT 0')  # Set attenuator value to 0
     TSL.write('AM:STAT 0')  # Disable amplitude modulation
-    TSL.write('PW:SHUT 0')  # Open internal shutter
+    TSL.write(':POW:SHUT 0')  # Open the internal shutter
 
     TSL.write(':TRIG:OUTP 3')  # Set trigger output to step mode
     TSL.write('TRIG:INP:EXT 0')  # Disable external trigger
@@ -62,20 +66,17 @@ def configure_tsl(power, start_wavelength, stop_wavelength, speed):
     TSL.write(f'WAV:SWE:STAR {start_wavelength}')  # Set start wavelength
     TSL.write(f'WAV:SWE:STOP {stop_wavelength}')  # Set stop wavelength
     TSL.write(f'WAV:SWE:SPE {speed}')  # Set sweep speed
-    step_size = float(speed) / 20000
     TSL.write(f'TRIG:OUTP:STEP {step_size}')  # Set trigger step size
 
 
-def configure_mpm(start_wavelength, stop_wavelength, speed):
+def configure_mpm(start_wavelength, stop_wavelength, speed, step_size):
     """Configures the MPM instrument with the given parameters."""
-    step_size = float(speed) / 20000  # Calculate step size based on speed
-
     MPM.write('UNIT 0')  # Set measurement unit to dBm
     MPM.write('LEV 1')  # Set TIA gain level
     MPM.write('WMOD SWEEP1')  # Set wavelength sweep mode
+    MPM.write('TRIG 1')  # Enable external trigger
     MPM.write(f'WSET {start_wavelength},{stop_wavelength},{step_size}')  # Configure sweep parameters
     MPM.write(f'SPE {speed}')  # Set sweep speed
-    MPM.write('TRIG 1')  # Enable external trigger
 
 
 def perform_sweep(start_wavelength):
@@ -84,17 +85,26 @@ def perform_sweep(start_wavelength):
     TSL.write('TRIG:INP:STAN 1')  # Enable trigger standby mode
     TSL.write('WAV:SWE 1')  # Start sweep
 
+    input("Press any key to start to the sweep process.")
+
     # Wait for sweep to complete
     while TSL.query('WAV:SWE?') != '3':
         time.sleep(0.1)
 
+    print("Starting the SME process....")
+
     # Start measurement on MPM
     MPM.write('MEAS')
-    TSL.write('WAV:SWE:SOFT')  # Trigger TSL
+
+    # Issue software trigger to the TSL
+    TSL.write('WAV:SWE:SOFT')
 
     # Wait for measurement to complete
     while MPM.query("STAT?").split(',')[0] == '0':
+        print(MPM.query("STAT?"))
         time.sleep(0.1)
+
+    print("SME process done.")
 
 
 def fetch_data():
@@ -108,7 +118,7 @@ def fetch_data():
         data = MPM.query_binary_values(
             f"LOGG? {module_no},{channel_no}",
             datatype='f',
-            expect_termination=True,
+            expect_termination=False,
             is_big_endian=False
         )
         return data
@@ -116,7 +126,6 @@ def fetch_data():
     except Exception as e:
         print(f"An error occurred while fetching data: {e}")
         return []
-
 
 
 def main():
@@ -133,9 +142,16 @@ def main():
     stop_wavelength = input("Input stop wavelength: ")
     speed = input("Input scan speed: ")
 
+    # Calculate step size
+    calculated_step_size = float(speed) / 20000
+    if calculated_step_size <= 0.001:
+        calculated_step_size = 0.002
+    elif calculated_step_size > 10.001:
+        calculated_step_size = 10.000
+
     # Configure instruments
-    configure_tsl(power, start_wavelength, stop_wavelength, speed)
-    configure_mpm(start_wavelength, stop_wavelength, speed)
+    configure_tsl(power, start_wavelength, stop_wavelength, speed, calculated_step_size)
+    configure_mpm(start_wavelength, stop_wavelength, speed, calculated_step_size)
 
     # Perform sweep and fetch data
     perform_sweep(start_wavelength)
