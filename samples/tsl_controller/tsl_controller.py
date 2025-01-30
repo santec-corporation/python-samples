@@ -630,28 +630,22 @@ class TSL:
     def get_wavelength_logging_data(self):
         """Reads out wavelength logging data."""
         try:
-            return self.instance.query_binary_values('READ:DAT?')
+            return self.instance.query_binary_values('READ:DAT?',
+                                                     datatype='f',
+                                                     is_big_endian=False,
+                                                     expect_termination=False)
         except Exception as e:
             print(f"Error while fetching wavelength logging data (query_binary_values): {e}")
-
-        try:
-            self.instance.write('READ:DAT?')
-            return self.instance.read_raw()
-        except Exception as e:
-            print(f"Error while fetching wavelength logging data (read_raw): {e}")
 
     def get_power_logging_data(self):
         """Reads out power logging data."""
         try:
-            return self.instance.query_binary_values(':READ:DAT:POW?')
+            return self.instance.query_binary_values(':READ:DAT:POW?',
+                                                     datatype='f',
+                                                     is_big_endian=False,
+                                                     expect_termination=False)
         except Exception as e:
             print(f"Error while fetching power logging data (query_binary_values): {e}")
-
-        try:
-            self.instance.write(':READ:DAT:POW?')
-            return self.instance.read_raw()
-        except Exception as e:
-            print(f"Error while fetching power logging data (read_raw): {e}")
 
     @property
     def modulation_function_status(self):
