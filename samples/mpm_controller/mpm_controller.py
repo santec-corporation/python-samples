@@ -574,9 +574,3 @@ class MPM:
                                                      expect_termination=False)
         except Exception as e:
             print(f"Error while fetching logging data (query_binary_values): {e}")
-
-        try:
-            self.instance.write(f'LOGG? {module_no},{channel_no}')
-            return self.instance.read_raw()
-        except Exception as e:
-            print(f"Error while fetching logging data (read_raw): {e}")
