@@ -127,7 +127,7 @@ class TSL:
     def wavelength_unit(self):
         """Gets wavelength unit."""
         response = self.query(':WAV:UNIT?')
-        return "nm" if response == '0' else "THz" if response == '1' else ""
+        return "nm" if '0' in response else "THz" if '1' in response else ""
 
     @wavelength_unit.setter
     def wavelength_unit(self, unit: int):
@@ -369,6 +369,9 @@ class TSL:
             representing a unit. When a unit character string is not
             specified, Hz（Hertz）is used as the default.
         """
+        if not self.minimum_sweep_wavelength <= value <= self.maximum_sweep_wavelength:
+            raise Exception(f"Value {value} out of range.")
+
         if self.wavelength_unit == 'THz':
             self.write(f':FREQ:SWE:STAR {value}')
         else:
@@ -412,26 +415,29 @@ class TSL:
             representing a unit. When a unit character string is not
             specified, Hz（Hertz）is used as the default.
         """
+        if not self.minimum_sweep_wavelength <= value <= self.maximum_sweep_wavelength:
+            raise Exception(f"Value {value} out of range.")
+
         if self.wavelength_unit == 'THz':
             self.write(f':FREQ:SWE:STOP {value}')
         else:
-            self.write(f':WAV:SWE:STOP {stop}')
+            self.write(f':WAV:SWE:STOP {value}')
 
     @property
     def minimum_sweep_wavelength(self):
         """Reads out the minimum wavelength in the configurable sweep range."""
         if self.wavelength_unit == 'THz':
-            return self.query(':FREQ:SWE:RANG:MIN?')
+            return float(self.query(':FREQ:SWE:RANG:MIN?'))
         else:
-            return self.query(':WAV:SWE:RANG:MIN?')
+            return float(self.query(':WAV:SWE:RANG:MIN?'))
 
     @property
     def maximum_sweep_wavelength(self):
         """Reads out the maximum wavelength in the configurable sweep range."""
         if self.wavelength_unit == 'THz':
-            return self.query(':FREQ:SWE:RANG:MAX?')
+            return float(self.query(':FREQ:SWE:RANG:MAX?'))
         else:
-            return self.query(':WAV:SWE:RANG:MAX?')
+            return float(self.query(':WAV:SWE:RANG:MAX?'))
 
     @property
     def sweep_mode(self):
@@ -588,8 +594,7 @@ class TSL:
         }
         return statuses.get(response, "Unknown status")
 
-    @sweep_status.setter
-    def sweep_status(self, status: int):
+    def _sweep_status(self, status: int):
         """
         Sets sweep status.
         This command executes a single scan.
@@ -599,6 +604,14 @@ class TSL:
             1: Start.
         """
         self.write(f':WAV:SWE {status}')
+
+    def start_sweep(self):
+        """Starts the TSL sweep operation."""
+        self._sweep_status(1)
+
+    def stop_sweep(self):
+        """Stops the TSL sweep operation."""
+        self._sweep_status(0)
 
     def repeat_scan(self):
         """Starts repeat scan."""
@@ -614,7 +627,7 @@ class TSL:
         """
         return int(self.query(':READ:POIN?'))
 
-    def wavelength_logging_data(self):
+    def get_wavelength_logging_data(self):
         """Reads out wavelength logging data."""
         try:
             return self.instance.query_binary_values('READ:DAT?')
@@ -627,7 +640,7 @@ class TSL:
         except Exception as e:
             print(f"Error while fetching wavelength logging data (read_raw): {e}")
 
-    def power_logging_data(self):
+    def get_power_logging_data(self):
         """Reads out power logging data."""
         try:
             return self.instance.query_binary_values(':READ:DAT:POW?')
@@ -693,6 +706,17 @@ class TSL:
             '1': "Enable"
         }
         return trigger_settings.get(response, "Unknown setting")
+
+    @input_trigger.setter
+    def input_trigger(self, value: int):
+        """
+        Sets the external trigger input.
+
+        Parameter
+            0: Disable
+            1: Enable
+        """
+        self.write(f':TRIG:INP:EXT {value}')
 
     @property
     def input_trigger_polarity(self):
@@ -839,9 +863,9 @@ class TSL:
     def trigger_through_mode(self):
         """Reads out the trigger through mode."""
         response = self.query(':TRIG:THR?')
-        if response is '0':
+        if response == '0':
             return "OFF"
-        elif response is '1':
+        elif response == '1':
             return "OFF"
         return ""
 
@@ -856,11 +880,12 @@ class TSL:
         """
         self.write(f':TRIG:THR {value}')
 
-    @property
-    def error_info(self):
-        """Reads out the error issued."""
-        response = self.query(':SYST:ERR?').split()
-        return CommandError[response].value if response in CommandError.__members__ else "Unknown Error"
+    # TODO: Rework the Error information method
+    # @property
+    # def error_info(self):
+    #     """Reads out the error issued."""
+    #     response = self.query(':SYST:ERR?').split()
+    #     return CommandError[response].value if response in CommandError.__members__ else "Unknown Error"
 
     @property
     def gpib_address(self):
@@ -878,21 +903,21 @@ class TSL:
         self.write(f':SYST:COMM:GPIB:ADDR {value}')
 
     @property
-    def delimiter_gpib_communication(self):
+    def gpib_delimiter(self):
         """Reads out the command delimiter for GPIB communication."""
         response = self.query(':SYST:COMM:GPIB:DEL?')
-        if response is '0':
+        if response == '0':
             return "CR"
-        elif response is '1':
+        elif response == '1':
             return "LF"
-        elif response is '2':
+        elif response == '2':
             return "CR+LF"
-        elif response is '3':
+        elif response == '3':
             return "None"
         return ""
 
-    @delimiter_gpib_communication.setter
-    def delimiter_gpib_communication(self, value: int):
+    @gpib_delimiter.setter
+    def gpib_delimiter(self, value: int):
         """
         Sets the command delimiter for GPIB communication. EOI is
         always sent.
@@ -1032,11 +1057,12 @@ class TSL:
         """Restarts the device."""
         self.write(':SPEC:REB')
 
-    @property
-    def alert_information(self):
-        """Reads out the current alert information."""
-        response = self.query(':SYST:ALER?').split()
-        return AlertCode[response].value if response in AlertCode.__members__ else "Unknown Error"
+    # TODO: Rework the Alert information method
+    # @property
+    # def alert_information(self):
+    #     """Reads out the current alert information."""
+    #     response = self.query(':SYST:ALER?').split()
+    #     return AlertCode[response].value if response in AlertCode.__members__ else "Unknown Error"
 
     @property
     def firmware_version(self):
