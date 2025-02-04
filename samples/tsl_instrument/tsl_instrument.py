@@ -4,21 +4,21 @@ TSL instrument class.
 Command mode: Legacy
 Communication: GPIB | LAN (PyVISA)
 
-Last Updated: Thu Jan 30, 2025 13:46
+Last Updated: Tue Feb 04, 2025 11:00
 """
 
 from enum import Enum
 
 
 class TSL:
-    def __init__(self, instance):
+    def __init__(self, connection):
         """
         Initializes the TSL class with an opened PyVISA resource.
 
         Parameters:
-            instance: An open PyVISA resource representing the connected instrument.
+            connection: An open PyVISA resource representing the connected instrument.
         """
-        self.instance = instance
+        self.connection = connection
 
     def query(self, command):
         """
@@ -30,7 +30,7 @@ class TSL:
         Returns:
             str: The response from the instrument.
         """
-        return self.instance.query(command)
+        return self.connection.query(command)
 
     def write(self, command):
         """
@@ -39,10 +39,9 @@ class TSL:
         Parameters:
             command (str): The command to send to the instrument.
         """
-        self.instance.write(command)
+        self.connection.write(command)
 
-    @property
-    def idn(self) -> str:
+    def get_idn(self) -> str:
         """
         Identification Query.
         Parameter: None
@@ -61,8 +60,7 @@ class TSL:
         """
         self.write('*RST')
 
-    @property
-    def self_test_query(self):
+    def get_self_test_query(self):
         """
         Self-test Query.
         Initiates an instrument self-test and places the results in the
@@ -71,8 +69,7 @@ class TSL:
         response = self.query('*TST?')
         return "No Error" if response == '0' else "Error"
 
-    @property
-    def operation_complete_query(self):
+    def get_operation_complete_query(self):
         """
         Operation Complete Query.
         Places 1 in the output queue when all operation processing is completed.
@@ -92,13 +89,11 @@ class TSL:
         """
         self.write('*CLS')
 
-    @property
-    def standard_event_enable_register(self):
+    def get_standard_event_enable_register(self):
         """Gets the Standard Event Enable Register (SEER)."""
         return int(self.query('*ESE?'))
 
-    @standard_event_enable_register.setter
-    def standard_event_enable_register(self, value: int):
+    def set_standard_event_enable_register(self, value: int):
         """
         Sets the Standard Event Enable Register (SEER).
 
@@ -106,18 +101,15 @@ class TSL:
         """
         self.write(f'*ESE {value}')
 
-    @property
-    def standard_event_status_register(self):
+    def get_standard_event_status_register(self):
         """Gets the Standard Event Status Register (SESR)."""
         return int(self.query('*ESR?'))
 
-    @property
-    def service_request_enable_register(self):
+    def get_service_request_enable_register(self):
         """Gets the Service Request Enable Register (SRER)."""
         return int(self.query('*SRE?'))
 
-    @service_request_enable_register.setter
-    def service_request_enable_register(self, value: int):
+    def set_service_request_enable_register(self, value: int):
         """
         Service Request Enable Register Setting
         The Service Request Enable Register (SRER).
@@ -126,19 +118,16 @@ class TSL:
         """
         self.query(f'*SRE {value}')
 
-    @property
-    def status_byte_register(self):
+    def get_status_byte_register(self):
         """Gets the Status Byte Register (STBR)"""
         return int(self.query('*STB?'))
 
-    @property
-    def wavelength_unit(self):
+    def get_wavelength_unit(self):
         """Gets wavelength unit."""
         response = self.query(':WAV:UNIT?')
         return "nm" if '0' in response else "THz" if '1' in response else ""
 
-    @wavelength_unit.setter
-    def wavelength_unit(self, unit: int):
+    def set_wavelength_unit(self, unit: int):
         """
         Sets wavelength unit.
 
@@ -149,29 +138,25 @@ class TSL:
         """
         self.write(f':WAV:UNIT {unit}')
 
-    @property
-    def wavelength(self):
+    def get_wavelength(self):
         """Gets the wavelength value."""
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             return self.query(':FREQ?')
         else:
             return self.query(':WAV?')
 
-    @wavelength.setter
-    def wavelength(self, value):
+    def set_wavelength(self, value):
         """Sets the output wavelength."""
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             self.write(f':FREQ {value}')
         else:
             self.write(f':WAV {value}')
 
-    @property
-    def fine_tuning(self):
+    def get_fine_tuning(self):
         """Reads out Fine-Tuning value."""
         return float(self.query(':WAV:FIN?'))
 
-    @fine_tuning.setter
-    def fine_tuning(self, value: float):
+    def set_fine_tuning(self, value: float):
         """
         Sets Fine-Tuning value.
 
@@ -185,14 +170,12 @@ class TSL:
         """Terminates Fine-Tuning operation."""
         self.query(':WAV:FIN:DIS')
 
-    @property
-    def coherence_control(self):
+    def get_coherence_control(self):
         """Reads out Coherence control status."""
         response = self.query(':COHC?')
         return "OFF" if response == '0' else "ON" if response == '1' else ""
 
-    @coherence_control.setter
-    def coherence_control(self, value: int):
+    def set_coherence_control(self, value: int):
         """
         Sets Coherence control status.
 
@@ -202,31 +185,27 @@ class TSL:
         """
         self.write(f':COHC {value}')
 
-    @property
-    def optical_output_status(self):
+    def get_optical_output_status(self):
         """Reads out optical output status."""
         response = self.query(':POW:STAT?')
         return "OFF" if response == '0' else "ON" if response == '1' else ""
 
-    @optical_output_status.setter
-    def optical_output_status(self, value: int):
+    def set_optical_output_status(self, value: int):
         """
-          Sets optical output status.
+        Sets optical output status.
 
         Parameter
-            0: optical output OFF
-            1: optical output ON
+            0: Optical output OFF
+            1: Optical output ON
         """
         self.write(f':POW:STAT {value}')
 
-    @property
-    def attenuator(self):
+    def get_attenuator(self):
         """Reads out the attenuator value."""
         response = self.query(':POW:ATT?')
         return float(response)
 
-    @attenuator.setter
-    def attenuator(self, value: float):
+    def set_attenuator(self, value: float):
         """
         Sets the attenuator value.
 
@@ -236,8 +215,7 @@ class TSL:
         """
         self.write(f':POW:ATT {value}')
 
-    @property
-    def power_control_mode(self):
+    def get_power_control_mode(self):
         """Reads out the setting of the power control."""
         response = self.query(':POW:ATT:AUT?')
         power_modes = {
@@ -246,8 +224,7 @@ class TSL:
         }
         return power_modes.get(response, "Unknown mode")
 
-    @power_control_mode.setter
-    def power_control_mode(self, value: int):
+    def set_power_control_mode(self, value: int):
         """
         Sets the power control mode.
 
@@ -257,14 +234,12 @@ class TSL:
         """
         self.write(f':POW:ATT:AUT {value}')
 
-    @property
-    def power(self):
+    def get_power(self):
         """Reads out optical output power level setting."""
         response = self.query(':POW?')
         return float(response)
 
-    @power.setter
-    def power(self, power: float):
+    def set_power(self, power: float):
         """
         Sets optical output power level.
 
@@ -272,7 +247,7 @@ class TSL:
             Range: -15dBm to +13dBm
             Step: 0.01dB (0.01mW)
 
-        @ Legacy <value> should be in decimal notation in “dBm” or “mW”.
+        Legacy <value> should be in decimal notation in “dBm” or “mW”.
         Units are defined by the command “:POWer:UNIT”.
         Character strings representing a unit cannot be accepted.
 
@@ -282,7 +257,6 @@ class TSL:
         """
         self.write(f':POW {power}')
 
-    @property
     def power_monitor(self):
         """
         Reads out monitored optical power. The value is measured by
@@ -295,8 +269,7 @@ class TSL:
         """
         return float(self.query(':POW:ACT?'))
 
-    @property
-    def internal_shutter_status(self):
+    def get_internal_shutter_status(self):
         """Reads out the status of the internal shutter."""
         response = self.query(':POW:SHUT?')
         shutter_status = {
@@ -305,8 +278,7 @@ class TSL:
         }
         return shutter_status.get(response, "Unknown status")
 
-    @internal_shutter_status.setter
-    def internal_shutter_status(self, value: int):
+    def set_internal_shutter_status(self, value: int):
         """
         Sets Open/Close status of the internal shutter.
         The function is the same as the Laser ON/OFF command “:POWer:STATe”
@@ -318,8 +290,7 @@ class TSL:
         """
         self.write(f':POW:SHUT {value}')
 
-    @property
-    def power_unit(self):
+    def get_power_unit(self):
         """Reads out the unit of the power setting and display."""
         response = self.query(':POW:UNIT?')
         units = {
@@ -328,8 +299,7 @@ class TSL:
         }
         return units.get(response, "Unknown unit")
 
-    @power_unit.setter
-    def power_unit(self, unit: int):
+    def set_power_unit(self, unit: int):
         """
         Changes the unit of the power setting and display.
 
@@ -339,16 +309,14 @@ class TSL:
         """
         self.write(f':POW:UNIT {unit}')
 
-    @property
-    def start_wavelength(self):
+    def get_start_wavelength(self):
         """Reads out the sweep start wavelength."""
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             return self.query(':FREQ:SWE:STAR?')
         else:
             return self.query(':WAV:SWE:STAR?')
 
-    @start_wavelength.setter
-    def start_wavelength(self, value):
+    def set_start_wavelength(self, value):
         """
         Sets the sweep start wavelength.
 
@@ -380,21 +348,19 @@ class TSL:
         if not self.minimum_sweep_wavelength <= value <= self.maximum_sweep_wavelength:
             raise Exception(f"Value {value} out of range.")
 
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             self.write(f':FREQ:SWE:STAR {value}')
         else:
             self.write(f':WAV:SWE:STAR {value}')
 
-    @property
-    def stop_wavelength(self):
+    def get_stop_wavelength(self):
         """Reads out the sweep stop wavelength."""
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             return self.query(':FREQ:SWE:STOP?')
         else:
             return self.query(':WAV:SWE:STOP?')
 
-    @stop_wavelength.setter
-    def stop_wavelength(self, value):
+    def set_stop_wavelength(self, value):
         """
         Sets the sweep stop wavelength.
 
@@ -426,12 +392,11 @@ class TSL:
         if not self.minimum_sweep_wavelength <= value <= self.maximum_sweep_wavelength:
             raise Exception(f"Value {value} out of range.")
 
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             self.write(f':FREQ:SWE:STOP {value}')
         else:
             self.write(f':WAV:SWE:STOP {value}')
 
-    @property
     def minimum_sweep_wavelength(self):
         """Reads out the minimum wavelength in the configurable sweep range."""
         if self.wavelength_unit == 'THz':
@@ -439,7 +404,6 @@ class TSL:
         else:
             return float(self.query(':WAV:SWE:RANG:MIN?'))
 
-    @property
     def maximum_sweep_wavelength(self):
         """Reads out the maximum wavelength in the configurable sweep range."""
         if self.wavelength_unit == 'THz':
@@ -447,8 +411,7 @@ class TSL:
         else:
             return float(self.query(':WAV:SWE:RANG:MAX?'))
 
-    @property
-    def sweep_mode(self):
+    def get_sweep_mode(self):
         """Reads out the sweep mode."""
         response = int(self.query(':WAV:SWE:MOD?'))
         modes = {
@@ -459,8 +422,7 @@ class TSL:
         }
         return modes.get(response, "Unknown mode")
 
-    @sweep_mode.setter
-    def sweep_mode(self, mode: int):
+    def set_sweep_mode(self, mode: int):
         """
         Sets the sweep mode.
 
@@ -472,37 +434,33 @@ class TSL:
         """
         self.write(f':WAV:SWE:MOD {mode}')
 
-    @property
-    def sweep_speed(self):
+    def get_sweep_speed(self):
         """Reads out sweep speed."""
         return float(self.query(':WAV:SWE:SPE?'))
 
-    @sweep_speed.setter
-    def sweep_speed(self, speed: int):
+    def set_sweep_speed(self, speed: int):
         """
-         Sets the sweep speed.
+        Sets the sweep speed.
 
-         Parameter
-             Range: 1 to 200 nm/s
-             Selection (TSL-570): 1,2,5,10,20,50,100,200 (nm/s)
-             Legacy <value> should be decimal notation in “nm/s”
-             Character strings representing a unit cannot be accepted.
+        Parameter
+            Range: 1 to 200 nm/s
+            Selection (TSL-570): 1,2,5,10,20,50,100,200 (nm/s)
+            Legacy <value> should be decimal notation in “nm/s”
+            Character strings representing a unit cannot be accepted.
 
-             SCPI <value> should be decimal notation in “nm/s”
-             Character strings representing a unit cannot be accepted.
+            SCPI <value> should be decimal notation in “nm/s”
+            Character strings representing a unit cannot be accepted.
         """
         self.write(f':WAV:SWE:SPE {speed}')
 
-    @property
-    def step_width(self):
+    def get_step_width(self):
         """Reads out the step of Step sweep mode."""
-        if self.wavelength_unit == 'THz':
+        if self.get_wavelength_unit() == 'THz':
             return self.query(':FREQ:SWE:STEP?')
         else:
             return float(self.query(':WAV:SWE:STEP?'))
 
-    @step_width.setter
-    def step_width(self, step):
+    def set_step_width(self, step):
         """
         Sets the step for Step sweep mode.
 
@@ -531,18 +489,16 @@ class TSL:
             representing a unit. When a unit character string is not
             specified, “Hz” is used as the default units.
         """
-        if self.wavelength_unit == 'THz':
-            self.write(f':FREQ:SWE:STEP {value}')
+        if self.get_wavelength_unit() == 'THz':
+            self.write(f':FREQ:SWE:STEP {step}')
         else:
             self.write(f':WAV:SWE:STEP {step}')
 
-    @property
-    def sweep_dwell(self):
+    def get_sweep_dwell(self):
         """Reads out wait time between consequent steps in step sweep mode."""
         return float(self.query(':WAV:SWE:DWEL?'))
 
-    @sweep_dwell.setter
-    def sweep_dwell(self, value: float):
+    def set_sweep_dwell(self, value: float):
         """
         Sets wait time between consequent steps in step sweep mode.
         This wait time does not include time for wavelength tuning.
@@ -553,13 +509,11 @@ class TSL:
         """
         self.write(f':WAV:SWE:DWEL {value}')
 
-    @property
-    def sweep_cycles(self):
+    def get_sweep_cycles(self):
         """Reads out the setting sweep repetition times."""
         return int(self.query(':WAV:SWE:CYCL?'))
 
-    @sweep_cycles.setter
-    def sweep_cycles(self, cycle: int):
+    def set_sweep_cycles(self, cycle: int):
         """
         Sets the sweep repetition times.
 
@@ -569,18 +523,15 @@ class TSL:
         """
         self.write(f':WAV:SWE:CYCL {cycle}')
 
-    @property
-    def sweep_count(self):
+    def get_sweep_count(self):
         """Reads out the current number of completed sweeps."""
         return int(self.query(':WAV:SWE:COUN?'))
 
-    @property
-    def sweep_delay(self):
+    def get_sweep_delay(self):
         """Reads out the setting wait time between consequent scans."""
         return float(self.query(':WAV:SWE:DEL?'))
 
-    @sweep_delay.setter
-    def sweep_delay(self, time: float):
+    def set_sweep_delay(self, time: float):
         """
         Sets the wait time between consequent scans.
 
@@ -590,8 +541,7 @@ class TSL:
         """
         self.write(f':WAV:SWE:DEL {time}')
 
-    @property
-    def sweep_status(self):
+    def get_sweep_status(self):
         """Reads out the current sweep status."""
         response = self.query(':WAV:SWE?')
         statuses = {
@@ -602,7 +552,7 @@ class TSL:
         }
         return statuses.get(response, "Unknown status")
 
-    def _sweep_status(self, status: int):
+    def set_sweep_status(self, status: int):
         """
         Sets sweep status.
         This command executes a single scan.
@@ -615,18 +565,17 @@ class TSL:
 
     def start_sweep(self):
         """Starts the TSL sweep operation."""
-        self._sweep_status(1)
+        self.set_sweep_status(1)
 
     def stop_sweep(self):
         """Stops the TSL sweep operation."""
-        self._sweep_status(0)
+        self.set_sweep_status(0)
 
     def repeat_scan(self):
         """Starts repeat scan."""
         self.query(':WAV:SWE:REP')
 
-    @property
-    def logging_count(self):
+    def get_logging_count(self):
         """
         Reads out the number of logging data.
 
@@ -638,25 +587,24 @@ class TSL:
     def get_wavelength_logging_data(self):
         """Reads out wavelength logging data."""
         try:
-            return self.instance.query_binary_values('READ:DAT?',
-                                                     datatype='f',
-                                                     is_big_endian=False,
-                                                     expect_termination=False)
+            return self.connection.query_binary_values('READ:DAT?',
+                                                       datatype='f',
+                                                       is_big_endian=False,
+                                                       expect_termination=False)
         except Exception as e:
             print(f"Error while fetching wavelength logging data (query_binary_values): {e}")
 
     def get_power_logging_data(self):
         """Reads out power logging data."""
         try:
-            return self.instance.query_binary_values(':READ:DAT:POW?',
-                                                     datatype='f',
-                                                     is_big_endian=False,
-                                                     expect_termination=False)
+            return self.connection.query_binary_values(':READ:DAT:POW?',
+                                                       datatype='f',
+                                                       is_big_endian=False,
+                                                       expect_termination=False)
         except Exception as e:
             print(f"Error while fetching power logging data (query_binary_values): {e}")
 
-    @property
-    def modulation_function_status(self):
+    def get_modulation_function_status(self):
         """Reads out status of modulation function of the laser output."""
         response = self.query(':AM:STAT?')
         status = {
@@ -665,8 +613,7 @@ class TSL:
         }
         return status.get(response, "Unknown status")
 
-    @modulation_function_status.setter
-    def modulation_function_status(self, value: int):
+    def set_modulation_function_status(self, value: int):
         """
         Enables and disables the modulation function of the laser output.
 
@@ -676,8 +623,7 @@ class TSL:
         """
         self.write(f':AM:STAT {value}')
 
-    @property
-    def modulation_source(self):
+    def get_modulation_source(self):
         """Reads out the modulation source."""
         response = self.query(':AM:SOUR?')
         modulation_sources = {
@@ -687,8 +633,7 @@ class TSL:
         }
         return modulation_sources.get(response, "Unknown source")
 
-    @modulation_source.setter
-    def modulation_source(self, value: int):
+    def set_modulation_source(self, value: int):
         """
         Sets modulation source.
 
@@ -699,8 +644,7 @@ class TSL:
         """
         self.write(f':AM:SOUR {value}')
 
-    @property
-    def input_trigger(self):
+    def get_input_trigger(self):
         """Reads out the setting of external trigger input."""
         response = self.query(':TRIG:INP:EXT?')
         trigger_settings = {
@@ -709,8 +653,7 @@ class TSL:
         }
         return trigger_settings.get(response, "Unknown setting")
 
-    @input_trigger.setter
-    def input_trigger(self, value: int):
+    def set_input_trigger(self, value: int):
         """
         Sets the external trigger input.
 
@@ -720,8 +663,7 @@ class TSL:
         """
         self.write(f':TRIG:INP:EXT {value}')
 
-    @property
-    def input_trigger_polarity(self):
+    def get_input_trigger_polarity(self):
         """Reads out input trigger polarity."""
         response = self.query(':TRIG:INP:ACT?')
         polarities = {
@@ -730,8 +672,7 @@ class TSL:
         }
         return polarities.get(response, "Unknown polarity")
 
-    @input_trigger_polarity.setter
-    def input_trigger_polarity(self, value: int):
+    def set_input_trigger_polarity(self, value: int):
         """
         Sets input trigger polarity.
 
@@ -741,8 +682,7 @@ class TSL:
         """
         self.write(f':TRIG:INP:ACT {value}')
 
-    @property
-    def trigger_signal_input_mode(self):
+    def get_trigger_signal_input_mode(self):
         """Reads out the trigger signal input standby mode."""
         response = self.query(':TRIG:INP:STAN?')
         input_modes = {
@@ -751,8 +691,7 @@ class TSL:
         }
         return input_modes.get(response, "Unknown mode")
 
-    @trigger_signal_input_mode.setter
-    def trigger_signal_input_mode(self, signal: int):
+    def set_trigger_signal_input_mode(self, signal: int):
         """
         Sets the device in trigger signal input standby mode.
 
@@ -763,11 +702,10 @@ class TSL:
         self.write(f':TRIG:INP:STAN {signal}')
 
     def software_trigger(self):
-        """Issues a soft trigger. Executes sweep from trigger standby mode."""
+        """Issues a software trigger. Executes sweep from trigger standby mode."""
         return self.write(':WAV:SWE:SOFT')
 
-    @property
-    def output_trigger_signal(self):
+    def get_output_trigger_signal(self):
         """Reads out the timing setting of the trigger signal output."""
         response = self.query(':TRIG:OUTP?')
         trigger_states = {
@@ -778,8 +716,7 @@ class TSL:
         }
         return trigger_states.get(response, "Unknown state")
 
-    @output_trigger_signal.setter
-    def output_trigger_signal(self, signal: int):
+    def set_output_trigger_signal(self, signal: int):
         """
         Sets the timing of the trigger signal output.
 
@@ -791,8 +728,7 @@ class TSL:
         """
         self.write(f':TRIG:OUTP {signal}')
 
-    @property
-    def output_trigger_polarity(self):
+    def get_output_trigger_polarity(self):
         """Reads out output trigger polarity."""
         response = self.query(':TRIG:OUTP:ACT?')
         polarities = {
@@ -801,8 +737,7 @@ class TSL:
         }
         return polarities.get(response, "Unknown polarity")
 
-    @output_trigger_polarity.setter
-    def output_trigger_polarity(self, value: int):
+    def set_output_trigger_polarity(self, value: int):
         """
         Sets output trigger polarity.
 
@@ -812,20 +747,17 @@ class TSL:
         """
         self.write(f':TRIG:OUTP:ACT {value}')
 
-    @property
-    def trigger_step(self):
+    def get_trigger_step(self):
         """Reads out the interval of the trigger signal output."""
         return float(self.query(':TRIG:OUTP:STEP?'))
 
-    @trigger_step.setter
-    def trigger_step(self, value: float):
+    def set_trigger_step(self, value: float):
         """
         Sets the interval of the trigger signal output.
 
         Parameter
-            Range：0.0001 〜 Maximum specified wavelength range (nm)
-            Step：0.0001（nm）
-
+            Range: 0.0001 to Maximum specified wavelength range (nm)
+            Step: 0.0001 (nm)
 
             The minimum set trigger step depends on the setting sweep
             speed. Refer to “6-5. Trigger Setting” for details.
@@ -836,12 +768,11 @@ class TSL:
             SCPI <value> is accepted in decimal notation and exponential
             notation. These numbers are followed by character strings
             representing a unit. When a unit character string is not
-            specified, m（meter）is used as the default.
+            specified, m (meter) is used as the default.
         """
         self.write(f':TRIG:OUTP:STEP {value}')
 
-    @property
-    def output_trigger_period_mode(self):
+    def get_output_trigger_period_mode(self):
         """Reads out the output trigger period mode."""
         response = self.query(':TRIG:OUTP:SETT?')
         modes = {
@@ -850,8 +781,7 @@ class TSL:
         }
         return modes.get(response, "Unknown mode")
 
-    @output_trigger_period_mode.setter
-    def output_trigger_period_mode(self, value: int):
+    def set_output_trigger_period_mode(self, value: int):
         """
         Sets the output trigger period mode.
 
@@ -861,18 +791,16 @@ class TSL:
         """
         self.write(f':TRIG:OUTP:SETT {value}')
 
-    @property
-    def trigger_through_mode(self):
+    def get_trigger_through_mode(self):
         """Reads out the trigger through mode."""
         response = self.query(':TRIG:THR?')
         if response == '0':
             return "OFF"
         elif response == '1':
-            return "OFF"
+            return "ON"
         return ""
 
-    @trigger_through_mode.setter
-    def trigger_through_mode(self, value: int):
+    def set_trigger_through_mode(self, value: int):
         """
         Sets the trigger through mode.
 
@@ -883,19 +811,16 @@ class TSL:
         self.write(f':TRIG:THR {value}')
 
     # TODO: Rework the Error information method
-    # @property
-    # def error_info(self):
+    # def get_error_info(self):
     #     """Reads out the error issued."""
     #     response = self.query(':SYST:ERR?').split()
     #     return CommandError[response].value if response in CommandError.__members__ else "Unknown Error"
 
-    @property
-    def gpib_address(self):
+    def get_gpib_address(self):
         """Reads out the GPIB address."""
         return int(self.query(':SYST:COMM:GPIB:ADDR?'))
 
-    @gpib_address.setter
-    def gpib_address(self, value: int):
+    def set_gpib_address(self, value: int):
         """
         Sets the GPIB address.
 
@@ -904,8 +829,7 @@ class TSL:
         """
         self.write(f':SYST:COMM:GPIB:ADDR {value}')
 
-    @property
-    def gpib_delimiter(self):
+    def get_gpib_delimiter(self):
         """Reads out the command delimiter for GPIB communication."""
         response = self.query(':SYST:COMM:GPIB:DEL?')
         if response == '0':
@@ -918,8 +842,7 @@ class TSL:
             return "None"
         return ""
 
-    @gpib_delimiter.setter
-    def gpib_delimiter(self, value: int):
+    def set_gpib_delimiter(self, value: int):
         """
         Sets the command delimiter for GPIB communication. EOI is
         always sent.
@@ -932,18 +855,15 @@ class TSL:
         """
         self.write(f':SYST:COMM:GPIB:DEL {value}')
 
-    @property
-    def mac_address(self):
+    def get_mac_address(self):
         """Reads out the MAC address."""
         return self.query(':SYST:COMM:ETH:MAC?')
 
-    @property
-    def ip_address(self):
+    def get_ip_address(self):
         """Reads out the IP address."""
         return self.query(':SYST:COMM:ETH:IPAD?')
 
-    @ip_address.setter
-    def ip_address(self, value: str):
+    def set_ip_address(self, value: str):
         """
         Sets the IP address.
 
@@ -952,13 +872,11 @@ class TSL:
         """
         self.write(f':SYST:COMM:ETH:IPAD {value}')
 
-    @property
-    def subnet_mask(self):
+    def get_subnet_mask(self):
         """Reads out the subnet mask."""
         return self.query(':SYST:COMM:ETH:SMAS?')
 
-    @subnet_mask.setter
-    def subnet_mask(self, value: str):
+    def set_subnet_mask(self, value: str):
         """
         Sets the subnet mask.
 
@@ -966,13 +884,11 @@ class TSL:
         """
         self.write(f':SYST:COMM:ETH:SMAS {value}')
 
-    @property
-    def default_gateway(self):
+    def get_default_gateway(self):
         """Reads out the default gateway."""
         return self.query(':SYST:COMM:ETH:DGAT?')
 
-    @default_gateway.setter
-    def default_gateway(self, value: str):
+    def set_default_gateway(self, value: str):
         """
         Sets the default gateway.
 
@@ -981,13 +897,11 @@ class TSL:
         """
         self.write(f':SYST:COMM:ETH:DGAT {value}')
 
-    @property
-    def port_number(self):
+    def get_port_number(self):
         """Reads out the port number."""
         return int(self.query(':SYST:COMM:ETH:PORT?'))
 
-    @port_number.setter
-    def port_number(self, value: int):
+    def set_port_number(self, value: int):
         """
         Sets the port number.
 
@@ -996,8 +910,7 @@ class TSL:
         """
         self.write(f':SYST:COMM:ETH:PORT {value}')
 
-    @property
-    def command_set(self):
+    def get_command_set(self):
         """Reads out the current set."""
         response = self.query(':SYST:COMM:COD?')
         if response == '0':
@@ -1006,8 +919,7 @@ class TSL:
             return "SCPI"
         return ""
 
-    @command_set.setter
-    def command_set(self, value: int):
+    def set_command_set(self, value: int):
         """
         Sets the command set.
 
@@ -1017,7 +929,6 @@ class TSL:
         """
         self.write(f':SYST:COMM:COD {value}')
 
-    @property
     def external_interlock(self):
         """
         Reads out the status of external interlock.
@@ -1033,13 +944,11 @@ class TSL:
             return "External interlocked"
         return ""
 
-    @property
-    def display_brightness(self):
+    def get_display_brightness(self):
         """Reads out brightness of the display."""
         return int(self.query(':DISP:BRIG?'))
 
-    @display_brightness.setter
-    def display_brightness(self, value: int):
+    def set_display_brightness(self, value: int):
         """
         Sets brightness of the display.
 
@@ -1060,19 +969,16 @@ class TSL:
         self.write(':SPEC:REB')
 
     # TODO: Rework the Alert information method
-    # @property
-    # def alert_information(self):
+    # def get_alert_information(self):
     #     """Reads out the current alert information."""
     #     response = self.query(':SYST:ALER?').split()
     #     return AlertCode[response].value if response in AlertCode.__members__ else "Unknown Error"
 
-    @property
-    def firmware_version(self):
+    def get_firmware_version(self):
         """Reads out the firmware version."""
         return self.query(':SYST:VERS?')
 
-    @property
-    def product_code(self):
+    def get_product_code(self):
         """Reads out the product code."""
         return self.query(':SYST:COD?')
 

@@ -4,23 +4,21 @@ MPM instrument class.
 Command mode: Legacy
 Communication: GPIB | LAN (PyVISA)
 
-Last Updated: Thu Jan 30, 2025 13:46
+Last Updated: Tue Feb 04, 2025 11:00
 """
 
 from enum import Enum
 
 
 class MPM:
-    def __init__(self, instance):
+    def __init__(self, connection):
         """
         Initializes the MPM class with an opened PyVISA resource.
 
         Parameters:
-            instance: An open PyVISA resource representing the connected instrument.
+            connection: An open PyVISA resource representing the connected instrument.
         """
-        self.instance = instance
-
-        self._power_mode_for_each_channel = None
+        self.connection = connection
 
     def query(self, command):
         """
@@ -53,8 +51,7 @@ class MPM:
         """
         self.write(f'ECHO {value}')
 
-    @property
-    def idn(self) -> str:
+    def get_idn(self) -> str:
         """
         Identification Query.
         Parameter: None
@@ -63,8 +60,7 @@ class MPM:
         """
         return self.query('*IDN?')
 
-    @property
-    def error(self):
+    def get_error_info(self):
         """
         Check Error information.
 
@@ -77,8 +73,7 @@ class MPM:
         error_code = ErrorCode(int(error_value))
         return error_code, error_message
 
-    @property
-    def get_modules(self):
+    def get_get_modules(self):
         """
         Check recognition of Module for MPM-210H.
         
@@ -98,7 +93,7 @@ class MPM:
         """
         return self.query('IDIS?')
 
-    def module_information(self, module: int):
+    def get_module_information(self, module: int):
         """
         Identification query of a module type.
 
@@ -118,13 +113,11 @@ class MPM:
         """
         return self.query(f'MMVER? {module}')
 
-    @property
-    def gpib_address(self):
+    def get_gpib_address(self):
         """Get the current GPIB address."""
         return self.query('ADDR?')
 
-    @gpib_address.setter
-    def gpib_address(self, value: str):
+    def set_gpib_address(self, value: str):
         """
         Set the GPIB address.
 
@@ -133,13 +126,11 @@ class MPM:
         """
         self.write(f'ADDR {value}')
 
-    @property
-    def gateway_address(self):
+    def get_gateway_address(self):
         """Get the current Gateway Address."""
         return self.query('GW?')
 
-    @gateway_address.setter
-    def gateway_address(self, address: str):
+    def set_gateway_address(self, address: str):
         """
         Set the Gateway address.
 
@@ -148,13 +139,11 @@ class MPM:
         """
         self.write(f'GW {address}')
 
-    @property
-    def subnet_mask(self):
+    def get_subnet_mask(self):
         """Get the current Subnet Mask."""
         return self.query('SUBNET?')
 
-    @subnet_mask.setter
-    def subnet_mask(self, address: str):
+    def set_subnet_mask(self, address: str):
         """
         Set the Subnet Mask.
 
@@ -163,13 +152,11 @@ class MPM:
         """
         self.write(f'SUBNET {address}')
 
-    @property
-    def ip_address(self):
+    def get_ip_address(self):
         """Get the current IP address."""
         return self.query('IP?')
 
-    @ip_address.setter
-    def ip_address(self, address: str):
+    def set_ip_address(self, address: str):
         """
         Set the IP address.
 
@@ -189,13 +176,11 @@ class MPM:
         """
         self.write('ZERO')
 
-    @property
-    def input_trigger(self):
+    def get_input_trigger(self):
         """Get the current input trigger setting."""
         return self.query('TRIG?')
 
-    @input_trigger.setter
-    def input_trigger(self, value: int):
+    def set_input_trigger(self, value: int):
         """
         Set the input trigger.
 
@@ -204,13 +189,11 @@ class MPM:
         """
         self.write(f'TRIG {value}')
 
-    @property
-    def measurement_mode(self):
+    def get_measurement_mode(self):
         """Get the current measurement mode."""
         return self.query('WMOD?')
 
-    @measurement_mode.setter
-    def measurement_mode(self, mode: str):
+    def set_measurement_mode(self, mode: str):
         """
         Set the measurement mode.
 
@@ -226,13 +209,11 @@ class MPM:
             raise ValueError("Invalid mode. Supported modes: CONST1, SWEEP1, CONST2, SWEEP2, FREE-RUN")
         self.write(f'WMOD {mode}')
 
-    @property
-    def wavelength(self):
+    def get_wavelength(self):
         """Get the current wavelength in Constant Wavelength Measurement Mode (CONST1, CONST2)."""
         return self.query('WAV?')
 
-    @wavelength.setter
-    def wavelength(self, value: float):
+    def set_wavelength(self, value: float):
         """
         Set the wavelength for Constant Wavelength Measurement Mode (CONST1, CONST2).
 
@@ -243,13 +224,11 @@ class MPM:
             raise ValueError("Wavelength must be between 1250.000 and 1630.000 nm.")
         self.write(f'WAV {value}')
 
-    @property
-    def wavelength_for_each_channel(self):
+    def get_wavelength_for_each_channel(self):
         """Get the wavelength for a specific module and channel in Constant Wavelength Measurement Mode."""
         return self.query('DWAV?')
 
-    @wavelength_for_each_channel.setter
-    def wavelength_for_each_channel(self, values: tuple):
+    def set_wavelength_for_each_channel(self, values: tuple):
         """
         Set the wavelength for a specific module and channel in Constant Wavelength Measurement Mode.
 
@@ -269,13 +248,11 @@ class MPM:
 
         self.write(f'DWAV {value1},{value2},{value3}')
 
-    @property
-    def sweep_wavelength_and_step(self):
+    def get_sweep_wavelength_and_step(self):
         """Get the current sweep wavelength settings (start, stop, step)."""
         return self.query('WSET?')
 
-    @sweep_wavelength_and_step.setter
-    def sweep_wavelength_and_step(self, values: tuple):
+    def set_sweep_wavelength_and_step(self, values: tuple):
         """
         Set the sweep wavelength parameters.
 
@@ -297,13 +274,11 @@ class MPM:
 
         self.write(f'WSET {start},{stop},{step}')
 
-    @property
-    def sweep_speed(self):
+    def get_sweep_speed(self):
         """Get the current wavelength sweep speed."""
         return self.query('SPE?')
 
-    @sweep_speed.setter
-    def sweep_speed(self, speed: float):
+    def set_sweep_speed(self, speed: float):
         """
         Set the wavelength sweep speed.
 
@@ -317,13 +292,11 @@ class MPM:
             raise ValueError("Sweep speed must be between 0.001 and 200 nm/sec.")
         self.write(f'SPE {speed}')
 
-    @property
-    def dynamic_range(self):
+    def get_dynamic_range(self):
         """Get the current TIA gain setting."""
         return self.query('LEV?')
 
-    @dynamic_range.setter
-    def dynamic_range(self, dynamic_range: int):
+    def set_dynamic_range(self, dynamic_range: int):
         """
         Set the TIA gain for measuring modes like CONST1, SWEEP1, FREERUN, and AUTO1.
 
@@ -334,8 +307,7 @@ class MPM:
             raise ValueError("Invalid range. Valid values are 1, 2, 3, 4, or 5.")
         self.write(f'LEV {dynamic_range}')
 
-    @property
-    def dynamic_range_set2(self):
+    def get_dynamic_range_set2(self):
         """Get TIA Gain for CONST1, SWEEP1, FREERUN, AUTO1 measuring mode for each channel."""
 
         def get_gain(value1, value2):
@@ -343,8 +315,7 @@ class MPM:
 
         return get_gain
 
-    @dynamic_range_set2.setter
-    def dynamic_range_set2(self, values):
+    def set_dynamic_range_set2(self, values):
         """
         Set TIA Gain for CONST1, SWEEP1, FREERUN, AUTO1 measuring mode for each channel.
 
@@ -359,13 +330,11 @@ class MPM:
             raise ValueError("Invalid gain value. Valid values are 1, 2, 3, 4, or 5.")
         self.write(f'DLEV {value1},{value2},{value3}')
 
-    @property
-    def average_time(self):
+    def get_average_time(self):
         """Get the average time."""
         return self.query('AVG?')
 
-    @average_time.setter
-    def average_time(self, time):
+    def set_average_time(self, time):
         """
         Set the average time.
 
@@ -376,13 +345,11 @@ class MPM:
             raise ValueError("Invalid time value. It must be between 0.01 and 10000.00 ms.")
         self.write(f'AVG {time}')
 
-    @property
-    def average_time_set2(self):
+    def get_average_time_set2(self):
         """Get the average time (set2)."""
         return self.query('FGSAVG?')
 
-    @average_time_set2.setter
-    def average_time_set2(self, value):
+    def set_average_time_set2(self, value):
         """
         Set the average time (set2).
 
@@ -393,13 +360,11 @@ class MPM:
             raise ValueError("Invalid value. It must be between 0.01 and 10000.00 ms.")
         self.write(f'FGSAVG {value}')
 
-    @property
-    def power_unit(self):
+    def get_power_unit(self):
         """Get the current measuring unit for optical power or electrical current."""
         return self.query('UNIT?')
 
-    @power_unit.setter
-    def power_unit(self, value):
+    def set_power_unit(self, value):
         """
         Set the measuring unit for optical power or electrical current.
 
@@ -410,13 +375,11 @@ class MPM:
             raise ValueError("Invalid value. It must be 0 (for dBm/dBmA) or 1 (for mW/mA).")
         self.write(f'UNIT {value}')
 
-    @property
-    def power_mode(self):
+    def get_power_mode(self):
         """Get the current power mode (Auto or Manual)."""
         return self.query('AUTO?')
 
-    @power_mode.setter
-    def power_mode(self, value):
+    def set_power_mode(self, value):
         """
         Set the power mode (Auto or Manual).
 
@@ -427,13 +390,11 @@ class MPM:
             raise ValueError("Invalid value. It must be 0 (Manual range) or 1 (Auto range).")
         self.write(f'AUTO {value}')
 
-    @property
-    def power_mode_for_each_channel(self):
+    def get_power_mode_for_each_channel(self, module_number):
         """Get the power mode (Auto or Manual) for a specific module."""
-        return self._power_mode_for_each_channel
+        return self.query(f'DAUTO? {module_number}')
 
-    @power_mode_for_each_channel.setter
-    def power_mode_for_each_channel(self, value):
+    def set_power_mode_for_each_channel(self, module_number, range_value):
         """
         Set the power mode (Auto or Manual) for each channel.
 
@@ -442,13 +403,11 @@ class MPM:
             module: Module number (0 to 5)
             range_mode: 0 for Manual range, 1 for Auto range
         """
-        module, range_mode = value
-        if range_mode not in [0, 1]:
+        if range_value not in [0, 1]:
             raise ValueError("Invalid value. It must be 0 (Manual range) or 1 (Auto range).")
-        self.write(f'DAUTO {module},{range_mode}')
-        self._power_mode_for_each_channel = range_mode
+        self.write(f'DAUTO {module_number},{range_value}')
 
-    def power_of_single_module(self, module):
+    def get_power_of_single_module(self, module):
         """
         Get the optical power or electrical current for each channel of the selected module.
 
@@ -473,7 +432,7 @@ class MPM:
         response = self.query(f'READ? {module}').split(',')
         return response
 
-    def wavelength_to_be_calibrated(self, module, index):
+    def get_wavelength_to_be_calibrated(self, module, index):
         """
         Get the wavelength that should be calibrated for the given module and index.
 
@@ -494,7 +453,7 @@ class MPM:
         response = self.query(f'CWAV? {module},{index}')
         return float(response)
 
-    def power_calibration_of_calibrated_wavelength(self, module, channel, index):
+    def get_power_calibration_of_calibrated_wavelength(self, module, channel, index):
         """
         Get the power calibration value of the wavelength from the "CWAV?" command index.
 
@@ -524,8 +483,7 @@ class MPM:
         """Command to stop measuring."""
         self.write('STOP')
 
-    @property
-    def logging_status(self):
+    def get_logging_status(self):
         """
         Gets the latest measuring status and logging points.
 
@@ -542,14 +500,12 @@ class MPM:
         status, count = self.instance.query('STAT?').split(',')
         return int(status), int(count)
 
-    @property
-    def logging_data_point(self):
+    def get_logging_data_point(self):
         """Get the current measurement logging point in CONST1/CONST2/FREE-RUN measuring mode."""
         response = self.query('LOGN?')
         return int(response)
 
-    @logging_data_point.setter
-    def logging_data_point(self, value: int):
+    def set_logging_data_point(self, value: int):
         """
         Set measurement logging point in CONST1/CONST2/FREE-RUN measuring mode.
         Refer to the 5.6.3 Measurement logging setting (LOGN).
