@@ -19,9 +19,9 @@ enabling seamless integration and automation.
 
 ### SME & Pseudo Implementations
 - **[simple_sme.py](https://github.com/santec-corporation/python-samples/blob/main/samples/simple_sme.py)**  
-  Basic SME (Single MEasurement) mode operation. 
+  Script to perform a basic SME (Single MEasurement) mode operation using Santec's TSL and MPM instruments. 
 - **[sme_pseudo.py](https://github.com/santec-corporation/python-samples/blob/main/samples/sme_pseudo.py)**  
-  Provides a pseudo-version of the SME functionality.  
+  Implements a pseudo-version of the SME functionality with a pre-configured TSL instrument setup.
 
 ### Instrument Classes
 
