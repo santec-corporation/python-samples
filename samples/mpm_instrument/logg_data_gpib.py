@@ -21,6 +21,8 @@ print("Logn: ", count)
 expected_size = count * 4 + (2 + 1 + int(math.log10(count)))
 
 with tqdm(total=expected_size, unit='B', unit_scale=True) as progress:
-    response = mpm.query_binary_values('LOGG? 0,1', chunk_size=expected_size, monitoring_interface=progress)
+    response = mpm.query_binary_values('LOGG? 0,1',
+                                       data_points=expected_size,
+                                       monitoring_interface=progress)
 
 print(len(response))
