@@ -10,9 +10,11 @@ Last Updated: Thu Jan 30, 2025 13:46
 Dependencies: pyvisa, numpy, time
 """
 
+import math
 import time
 import pyvisa
 import numpy as np
+from tqdm import tqdm
 
 # Initialize global variables
 TSL = None  # Tunable Laser Source
@@ -30,10 +32,11 @@ def initialize_instruments():
             idn = buffer.query("*IDN?")
             if 'TSL' in idn:
                 TSL = buffer  # Assign TSL instrument
-                TSL.read_termination = '\r\n'
+                TSL.read_termination = "\r\n"
+                TSL.write_termination = "\r\n"
             elif 'MPM' in idn:
                 MPM = buffer  # Assign MPM instrument
-                MPM.read_termination = '\n'
+                # MPM.write_termination = "\n"
         except Exception as e:
             print(f"Error while opening {tool}: {e}")
 
@@ -83,25 +86,25 @@ def perform_sweep(start_wavelength):
     """Executes the wavelength sweep and triggers measurement."""
     TSL.write(f'WAV {start_wavelength}')  # Set starting wavelength
     TSL.write('TRIG:INP:STAN 1')  # Enable trigger standby mode
-    TSL.write('WAV:SWE 1')  # Start sweep
 
     input("Press any key to start to the sweep process.")
-
-    # Wait for sweep to complete
-    while TSL.query('WAV:SWE?') != '3':
-        time.sleep(0.1)
 
     print("Starting the SME process....")
 
     # Start measurement on MPM
     MPM.write('MEAS')
 
-    # Issue software trigger to the TSL
-    TSL.write('WAV:SWE:SOFT')
+    TSL.write(':WAV:SWE 1')  # Start sweep
+    status = int(TSL.query(':WAV:SWE?'))
+    while status != 3:
+        # tsl.write(':WAV:SWE 1')
+        status = int(TSL.query(':WAV:SWE?'))
+        time.sleep(0.5)
+    TSL.write(':WAV:SWE:SOFT')
 
     # Wait for measurement to complete
     while MPM.query("STAT?").split(',')[0] == '0':
-        print(MPM.query("STAT?"))
+        # print(MPM.query("STAT?"))
         time.sleep(0.1)
 
     print("SME process done.")
@@ -110,17 +113,21 @@ def perform_sweep(start_wavelength):
 def fetch_data():
     """Fetches and returns logged data from the MPM."""
     try:
+        count = int(MPM.query('LOGN?'))
+        print('Logn: ', count)
+
+        expected_size = count * 4 + (2 + 1 + int(math.log10(count)))
+
         # Prompt user for module and channel numbers
         user_input = input("Enter the module and channel number to fetch data from (e.g., 0,1): ")
         module_no, channel_no = map(int, user_input.split(','))
 
         # Query MPM for logged data
-        data = MPM.query_binary_values(
-            f"LOGG? {module_no},{channel_no}",
-            datatype='f',
-            expect_termination=False,
-            is_big_endian=False
-        )
+        data = []
+        with tqdm(total=expected_size, unit='B', unit_scale=True) as progress:
+            data = MPM.query_binary_values(f'LOGG? {module_no},{channel_no}',
+                                           chunk_size=expected_size,
+                                           monitoring_interface=progress)
         return data
 
     except Exception as e:
@@ -141,24 +148,18 @@ def main():
     start_wavelength = input("Input start wavelength: ")
     stop_wavelength = input("Input stop wavelength: ")
     speed = input("Input scan speed: ")
-
-    # Calculate step size
-    calculated_step_size = float(speed) / 20000
-    if calculated_step_size <= 0.001:
-        calculated_step_size = 0.002
-    elif calculated_step_size > 10.001:
-        calculated_step_size = 10.000
+    step = float(input("Input step wavelength: "))
 
     # Configure instruments
-    configure_tsl(power, start_wavelength, stop_wavelength, speed, calculated_step_size)
-    configure_mpm(start_wavelength, stop_wavelength, speed, calculated_step_size)
+    configure_tsl(power, start_wavelength, stop_wavelength, speed, step)
+    configure_mpm(start_wavelength, stop_wavelength, speed, step)
 
     # Perform sweep and fetch data
     perform_sweep(start_wavelength)
     data = fetch_data()
 
     # Output data
-    print("Measurement complete. \nData:", data)
+    print("Measurement complete. \nData length:", len(data))
 
 
 if __name__ == "__main__":
