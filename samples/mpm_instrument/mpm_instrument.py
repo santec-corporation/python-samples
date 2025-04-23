@@ -7,6 +7,7 @@ Communication: GPIB | LAN (PyVISA)
 Last Updated: Tue Feb 04, 2025 11:00
 """
 
+import math
 from enum import Enum
 
 
@@ -30,7 +31,7 @@ class MPM:
         Returns:
             str: The response from the instrument.
         """
-        return self.instance.query(command)
+        return self.connection.query(command)
 
     def write(self, command):
         """
@@ -39,7 +40,7 @@ class MPM:
         Parameters:
             command (str): The command to send to the instrument.
         """
-        self.instance.write(command)
+        self.connection.write(command)
 
     def echo(self, value: int):
         """
@@ -497,7 +498,7 @@ class MPM:
 
         Example Response: 1,100
         """
-        status, count = self.instance.query('STAT?').split(',')
+        status, count = self.connection.query('STAT?').split(',')
         return int(status), int(count)
 
     def get_logging_data_point(self):
@@ -529,21 +530,17 @@ class MPM:
         Read out the logging logg.
         This command is not available for RS-232 communication.
 
-        Example:    LOGG? 0,1
+        Example:    LOGG? 0,1`
         """
         try:
-            return self.instance.query_binary_values(f'LOGG? {module_no},{channel_no}',
-                                                     datatype='f',
-                                                     is_big_endian=False,
-                                                     expect_termination=False)
+            count = self.get_logging_data_point()
+
+            expected_size = count * 4 + (2 + 1 + int(math.log10(count)))
+            return self.connection.query_binary_values(f'LOGG? {module_no},{channel_no}',
+                                                       data_points=expected_size)
+
         except Exception as e:
             print(f"Error while fetching logging data (query_binary_values): {e}")
-
-        try:
-            self.instance.write(f'LOGG? {module_no},{channel_no}')
-            return self.instance.read_raw()
-        except Exception as e:
-            print(f"Error while fetching logging data (read_raw): {e}")
 
 
 class ErrorCode(Enum):
