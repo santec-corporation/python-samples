@@ -126,7 +126,7 @@ def fetch_data():
         data = []
         with tqdm(total=expected_size, unit='B', unit_scale=True) as progress:
             data = MPM.query_binary_values(f'LOGG? {module_no},{channel_no}',
-                                           chunk_size=expected_size,
+                                           data_points=expected_size,
                                            monitoring_interface=progress)
         return data
 
