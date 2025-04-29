@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Script to retrieve TSL power data via LAN communication.
+Script to retrieve TSL wavelength data via LAN communication.
 """
 
 import math
