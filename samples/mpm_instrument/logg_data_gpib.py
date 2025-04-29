@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Script to retrieve MPM logging data via LAN communication.
+Script to retrieve MPM logging data via GPIB communication.
 """
 
 import math
