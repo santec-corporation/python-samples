@@ -14,4 +14,4 @@ mpm = MPM(instrument)
 print(mpm.get_idn())
 
 # Print logging data length
-print(len(mpm.get_logging_data(0,1)))
+print(len(mpm.get_logging_data(0, 1)))
