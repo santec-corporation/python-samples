@@ -74,8 +74,12 @@ def setup_meter(mpm, start_nm, stop_nm, speed, step_nm, data_count):
     """Configure the MPM."""
     mpm.write('STOP')  # Stop any old measurement
     mpm.write('UNIT 0')  # dBm
-    time.sleep(1)
-    mpm.write('WMOD SWEEP2')  # Sweep mode
+    time.sleep(0.5)
+    mpm.write('WMOD SWEEP2')  # Set the SWEEP2 measurement mode
+    while True:
+        if 'SWEEP2' in mpm.query('WMOD?'):
+            break
+        mpm.write('WMOD SWEEP2')
     print("Sweep mode: ", mpm.query('WMOD?'))
     mpm.write('TRIG 1')  # Enable external trigger
     mpm.write(f'WSET {start_nm},{stop_nm},{step_nm}')
