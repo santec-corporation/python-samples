@@ -1,166 +1,73 @@
-# -*- coding: utf-8 -*-
 """
-Simple SME.
-Script to perform SME mode scan.
-Instruments: Santec TSL and MPM
-Command mode: Legacy
-Communication: GPIB
+SME - Single Measurement mode operation.
 
-Last Updated: Thu Jan 30, 2025 13:46
-Dependencies: pyvisa, numpy, time
+Supported Instruments
+TSL series and MPM series.
+
+Supported Communication modes
+GPIB and TCPIP.
 """
 
-import math
-import time
-import pyvisa
-import numpy as np
-from tqdm import tqdm
-
-# Initialize global variables
-TSL = None  # Tunable Laser Source
-MPM = None  # Multi-Channel Power Meter
+# Import the SME class
+from sme_operation.sme_operation import SME
 
 
-def initialize_instruments():
-    """Detects instruments via GPIB and initializes TSL and MPM."""
-    global TSL, MPM
-    rm = pyvisa.ResourceManager()
-    tools = [resource for resource in rm.list_resources() if 'GPIB' in resource]  # Filter GPIB devices
-    for tool in tools:
-        try:
-            buffer = rm.open_resource(tool)
-            idn = buffer.query("*IDN?")
-            if 'TSL' in idn:
-                TSL = buffer  # Assign TSL instrument
-                TSL.read_termination = "\r\n"
-                TSL.write_termination = "\r\n"
-            elif 'MPM' in idn:
-                MPM = buffer  # Assign MPM instrument
-                # MPM.write_termination = "\n"
-        except Exception as e:
-            print(f"Error while opening {tool}: {e}")
-
-
-def configure_tsl(power, start_wavelength, stop_wavelength, speed, step_size):
-    """Configures the TSL instrument with the given parameters."""
-    TSL.write('*CLS')  # Clear status
-    TSL.write('*RST')  # Reset device
-    TSL.write('SYST:COMM:GPIB:DEL 2')  # Set GPIB delimiter
-    TSL.write('SYST:COMM:COD 0')  # Enable Legacy commands
-
-    if TSL.query('POW:STAT?') == '0':  # Check if output is off
-        TSL.write('POW:STAT 1')  # Turn on output
-        while int(TSL.query('*OPC?')) == 0:  # Wait for operation to complete
-            time.sleep(1)
-
-    TSL.write('POW:UNIT 0')  # Set power unit to dBm
-    TSL.write('WAV:UNIT 0')  # Set wavelength unit to nm
-    TSL.write('COHCtrl 0')  # Disable coherence control
-    TSL.write('POW:ATT:AUT 1')  # Auto power control mode
-    # TSL.write('POW:ATT 0')  # Set attenuator value to 0
-    TSL.write('AM:STAT 0')  # Disable amplitude modulation
-    TSL.write(':POW:SHUT 0')  # Open the internal shutter
-
-    TSL.write(':TRIG:OUTP 3')  # Set trigger output to step mode
-    TSL.write('TRIG:INP:EXT 0')  # Disable external trigger
-
-    # Configure sweep parameters
-    TSL.write(f'POW {power}')  # Set output power
-    TSL.write(f'WAV:SWE:STAR {start_wavelength}')  # Set start wavelength
-    TSL.write(f'WAV:SWE:STOP {stop_wavelength}')  # Set stop wavelength
-    TSL.write(f'WAV:SWE:SPE {speed}')  # Set sweep speed
-    TSL.write(f'TRIG:OUTP:STEP {step_size}')  # Set trigger step size
-
-
-def configure_mpm(start_wavelength, stop_wavelength, speed, step_size):
-    """Configures the MPM instrument with the given parameters."""
-    MPM.write('UNIT 0')  # Set measurement unit to dBm
-    MPM.write('LEV 1')  # Set TIA gain level
-    MPM.write('WMOD SWEEP1')  # Set wavelength sweep mode
-    MPM.write('TRIG 1')  # Enable external trigger
-    MPM.write(f'WSET {start_wavelength},{stop_wavelength},{step_size}')  # Configure sweep parameters
-    MPM.write(f'SPE {speed}')  # Set sweep speed
-
-
-def perform_sweep(start_wavelength):
-    """Executes the wavelength sweep and triggers measurement."""
-    TSL.write(f'WAV {start_wavelength}')  # Set starting wavelength
-    TSL.write('TRIG:INP:STAN 1')  # Enable trigger standby mode
-
-    input("Press any key to start to the sweep process.")
-
-    print("Starting the SME process....")
-
-    # Start measurement on MPM
-    MPM.write('MEAS')
-
-    TSL.write(':WAV:SWE 1')  # Start sweep
-    status = int(TSL.query(':WAV:SWE?'))
-    while status != 3:
-        # tsl.write(':WAV:SWE 1')
-        status = int(TSL.query(':WAV:SWE?'))
-        time.sleep(0.5)
-    TSL.write(':WAV:SWE:SOFT')
-
-    # Wait for measurement to complete
-    while MPM.query("STAT?").split(',')[0] == '0':
-        # print(MPM.query("STAT?"))
-        time.sleep(0.1)
-
-    print("SME process done.")
-
-
-def fetch_data():
-    """Fetches and returns logged data from the MPM."""
-    try:
-        count = int(MPM.query('LOGN?'))
-        print('Logn: ', count)
-
-        expected_size = count * 4 + (2 + 1 + int(math.log10(count)))
-
-        # Prompt user for module and channel numbers
-        user_input = input("Enter the module and channel number to fetch data from (e.g., 0,1): ")
-        module_no, channel_no = map(int, user_input.split(','))
-
-        # Query MPM for logged data
-        data = []
-        with tqdm(total=expected_size, unit='B', unit_scale=True) as progress:
-            data = MPM.query_binary_values(f'LOGG? {module_no},{channel_no}',
-                                           data_points=expected_size,
-                                           monitoring_interface=progress)
-        return data
-
-    except Exception as e:
-        print(f"An error occurred while fetching data: {e}")
-        return []
-
-
-def main():
+def main(tsl, mpm):
     """Main workflow to initialize, configure, and perform the sweep."""
-    initialize_instruments()
-
-    if not TSL or not MPM:
-        print("Error: Instruments not detected.")
-        return
+    # Create an instance and initialize SME class
+    sme = SME(tsl, mpm)
 
     # Collect user inputs
-    power = input("Input output power: ")
-    start_wavelength = input("Input start wavelength: ")
-    stop_wavelength = input("Input stop wavelength: ")
-    speed = input("Input scan speed: ")
+    power = float(input("\nInput output power: "))
+    start_wavelength = float(input("Input start wavelength: "))
+    stop_wavelength = float(input("Input stop wavelength: "))
+    speed = float(input("Input scan speed: "))
     step = float(input("Input step wavelength: "))
 
-    # Configure instruments
-    configure_tsl(power, start_wavelength, stop_wavelength, speed, step)
-    configure_mpm(start_wavelength, stop_wavelength, speed, step)
+    # Configure TSL and MPM parameters
+    sme.configure_tsl(start_wavelength, stop_wavelength, step, power, speed)
 
-    # Perform sweep and fetch data
-    perform_sweep(start_wavelength)
-    data = fetch_data()
+    sme.configure_mpm(
+        start_wavelength,
+        stop_wavelength,
+        step,
+        speed,
+        is_mpm_215=False,
+    )  # Set is_mpm_215 to True if using MPM-215 module
 
-    # Output data
-    print("Measurement complete. \nData length:", len(data))
+    input("\nPress any key to start to the scan process.")
+
+    # Perform sweep
+    # Set display_logging_status True to print the MPM logging status
+    sme.perform_scan(display_logging_status=False)
 
 
 if __name__ == "__main__":
-    main()
+    # Import pyvisa
+    import pyvisa
+
+    # Create an instance of the Resource manager class
+    rm = pyvisa.ResourceManager()
+    # print(rm.list_resources())
+
+    # Connect to the TSL and MPM instruments
+    tsl_instrument = rm.open_resource("GPIB2::3::INSTR", read_termination = '\r\n')
+    mpm_instrument = rm.open_resource("GPIB2::15::INSTR", read_termination = '\n')
+
+    # Uncomment the below code to use TCPIP connection
+    # tsl_instrument = rm.open_resource("TCPIP::192.168.1.152::5000::SOCKET",
+    #                                   read_termination='\r',
+    #                                   open_timeout=5000)
+    # mpm_instrument = rm.open_resource("TCPIP::192.168.1.161::5000::SOCKET",
+    #                                   read_termination='\r',
+    #                                   open_timeout=5000)
+
+    if not tsl_instrument or not mpm_instrument:
+        raise Exception("Could not connect to TSL / MPM instrument(s).")
+
+    print("Connected to the instruments:")
+    print(tsl_instrument.query('*IDN?'))
+    print(mpm_instrument.query('*IDN?'))
+
+    # Execute the main function
+    main(tsl_instrument, mpm_instrument)
