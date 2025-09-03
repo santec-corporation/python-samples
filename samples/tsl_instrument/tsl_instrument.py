@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TSL instrument class.
 Command mode: Legacy

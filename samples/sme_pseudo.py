@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SME pseudo script.
 Script to perform SME mode scan using Santec's TSL and custom PD via GPIB communication.

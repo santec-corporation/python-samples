@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 PCU instrument class.
 Command mode: Legacy

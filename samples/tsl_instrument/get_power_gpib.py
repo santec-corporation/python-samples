@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Script to retrieve TSL power data via GPIB communication using PyVISA.
 """

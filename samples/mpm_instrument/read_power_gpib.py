@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Program to perform MPM read power operation via GPIB.
 """

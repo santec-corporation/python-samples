@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 MPM instrument class.
 Command mode: Legacy

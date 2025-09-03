@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Script to retrieve MPM logging data via LAN communication using PyVISA.
 """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Script to retrieve TSL wavelength data via LAN communication using PyVISA.
 """
